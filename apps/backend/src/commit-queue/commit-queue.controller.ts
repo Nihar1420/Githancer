@@ -8,38 +8,49 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { CommitQueueService } from './commit-queue.service';
 import { CommitStatus } from './commit-queue.entity';
 import { UpdateCommitDto } from './dtos/update-commit.dto';
 import { ReorderQueueDto } from './dtos/reorder-queue.dto';
+import { CurrentUserId } from '../common/current-user.decorator';
+import { Public } from '../auth/public.decorator';
+import { CliOrJwtAuthGuard } from '../auth/guards/cli-auth.guard';
 
 @Controller()
 export class CommitQueueController {
   constructor(private readonly commitQueueService: CommitQueueService) {}
 
-  // TODO(Phase 3): throttle per-project rather than per-IP via a custom tracker.
+  // Accepts CLI Bearer key OR dashboard JWT cookie. @Public bypasses the global
+  // JWT guard so the CLI path can run; CliOrJwtAuthGuard does the real check.
+  @Public()
+  @UseGuards(CliOrJwtAuthGuard)
   @Get('projects/:id/next-commit')
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  nextCommit(@Param('id') projectId: string) {
-    return this.commitQueueService.nextCommit(projectId);
+  nextCommit(@CurrentUserId() userId: string, @Param('id') projectId: string) {
+    return this.commitQueueService.nextCommit(userId, projectId);
   }
 
+  @Public()
+  @UseGuards(CliOrJwtAuthGuard)
   @Patch('commit-queue/:id')
-  update(@Param('id') id: string, @Body() dto: UpdateCommitDto) {
+  update(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateCommitDto,
+  ) {
     const status =
       dto.status === 'executed' ? CommitStatus.EXECUTED : CommitStatus.SKIPPED;
-    return this.commitQueueService.markExecuted(id, status, dto.commitHash);
+    return this.commitQueueService.markExecuted(userId, id, status, dto.commitHash);
   }
 
   @Get('projects/:id/queue')
   list(
+    @CurrentUserId() userId: string,
     @Param('id') projectId: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.commitQueueService.list(
+      userId,
       projectId,
       page ? Number(page) : undefined,
       limit ? Number(limit) : undefined,
@@ -47,7 +58,11 @@ export class CommitQueueController {
   }
 
   @Put('projects/:id/queue/reorder')
-  reorder(@Param('id') projectId: string, @Body() dto: ReorderQueueDto) {
-    return this.commitQueueService.reorder(projectId, dto.order);
+  reorder(
+    @CurrentUserId() userId: string,
+    @Param('id') projectId: string,
+    @Body() dto: ReorderQueueDto,
+  ) {
+    return this.commitQueueService.reorder(userId, projectId, dto.order);
   }
 }

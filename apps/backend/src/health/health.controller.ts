@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from '../auth/public.decorator';
 
 @Controller('health')
 export class HealthController {
   // Public, unauthenticated liveness probe.
+  @Public()
   @Get()
-  @SkipThrottle()
   check(): { status: string; timestamp: string } {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }

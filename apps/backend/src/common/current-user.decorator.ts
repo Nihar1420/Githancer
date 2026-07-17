@@ -4,19 +4,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 
-/**
- * Resolves the current user id.
- *
- * TODO(Phase 3): replace the `x-user-id` header lookup with JwtAuthGuard +
- * request.user once GitHub OAuth / JWT is implemented.
- */
+interface AuthedRequest {
+  user?: { userId: string; username: string };
+}
+
+/** Returns the authenticated user's id, set by JwtAuthGuard / CliOrJwtAuthGuard. */
 export const CurrentUserId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): string => {
-    const request = ctx.switchToHttp().getRequest<{ headers: Record<string, unknown> }>();
-    const userId = request.headers['x-user-id'];
-    if (typeof userId !== 'string' || userId.length === 0) {
-      throw new UnauthorizedException('Missing x-user-id header (temporary until Phase 3 auth)');
+    const req = ctx.switchToHttp().getRequest<AuthedRequest>();
+    if (!req.user?.userId) {
+      throw new UnauthorizedException('Not authenticated');
     }
-    return userId;
+    return req.user.userId;
   },
 );

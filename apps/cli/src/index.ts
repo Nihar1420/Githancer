@@ -1,15 +1,30 @@
 #!/usr/bin/env node
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { Command } from 'commander';
+import { registerInit } from './commands/init';
+import { registerLogin } from './commands/login';
+import { registerSync } from './commands/sync';
+import { registerCommit } from './commands/commit';
+import { registerPush } from './commands/push';
+import { registerStatus } from './commands/status';
+
+const pkg = JSON.parse(
+  readFileSync(join(__dirname, '..', 'package.json'), 'utf8'),
+) as { version: string };
 
 const program = new Command();
-
 program
   .name('timeline')
   .description('Git Timeline Manager CLI — schedule and backdate commits')
-  .version('1.0.0');
+  .version(pkg.version);
 
-// Commands are registered in Phase 3:
-//   timeline init | login | sync | commit | push | status
+registerInit(program);
+registerLogin(program);
+registerSync(program);
+registerCommit(program);
+registerPush(program);
+registerStatus(program);
 
 program.parse(process.argv);
 
