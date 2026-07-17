@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
+import { UsersModule } from './users/users.module';
+import { GithubModule } from './github/github.module';
+import { ProjectsModule } from './projects/projects.module';
+import { CommitQueueModule } from './commit-queue/commit-queue.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -28,9 +34,14 @@ import { DatabaseModule } from './database/database.module';
         ANTHROPIC_API_KEY: Joi.string().allow('').optional(),
       }),
     }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     DatabaseModule,
+    UsersModule,
+    GithubModule,
+    ProjectsModule,
+    CommitQueueModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

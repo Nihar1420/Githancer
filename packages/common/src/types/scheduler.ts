@@ -58,6 +58,10 @@ export interface SchedulerOutput {
   timestamps: Timestamp[];
   mode: SchedulingMode;
   totalGenerated: number;
+  /** Number of collisions the collision-detector had to resolve. */
+  collisionCount?: number;
+  /** Gaps larger than the orchestrator threshold (default 7 days). */
+  gaps?: GapInfo[];
 }
 
 /** A gap between two consecutive scheduled timestamps. */
