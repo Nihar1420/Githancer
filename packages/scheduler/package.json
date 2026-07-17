@@ -1,0 +1,22 @@
+{
+  "name": "@gtm/scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic commit-scheduling strategies for Git Timeline Manager",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@gtm/common": "workspace:*",
+    "seedrandom": "^3.0.5"
+  },
+  "devDependencies": {
+    "@types/seedrandom": "^3.0.8",
+    "typescript": "^5.4.5"
+  }
+}

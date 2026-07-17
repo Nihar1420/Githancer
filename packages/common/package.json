@@ -1,0 +1,17 @@
+{
+  "name": "@gtm/common",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared TypeScript types, DTOs, and enums for Git Timeline Manager",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

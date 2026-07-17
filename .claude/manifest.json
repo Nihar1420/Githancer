@@ -1,0 +1,75 @@
+{
+  "name": "git-timeline-manager",
+  "description": "NestJS + Next.js + CLI monorepo — Git repository timeline orchestration platform with scheduling engine, REST API, Node.js CLI, and React dashboard.",
+  "version": "1.0.0",
+  "requiredConfig": [
+    "project.name",
+    "user.username",
+    "stack.backend.framework",
+    "stack.frontend.framework",
+    "stack.cli.runtime",
+    "stack.database",
+    "stack.packageManager"
+  ],
+  "optionalIntegrations": [
+    "github",
+    "railway",
+    "azure"
+  ],
+  "agents": {
+    "framework": [
+      "orchestrator",
+      "orchestrator-pipelines",
+      "orchestrator-dag",
+      "orchestrator-pr",
+      "critical-thinker",
+      "monorepo-architect"
+    ],
+    "pack": [
+      "backend",
+      "frontend",
+      "cli",
+      "scheduler-engine",
+      "frontend-refactor",
+      "frontend-tests",
+      "backend-tests",
+      "e2e",
+      "infra",
+      "func-to-tech-spec",
+      "func-spec-writer"
+    ]
+  },
+  "skills": {
+    "framework": [
+      "brainstorming",
+      "memory-review",
+      "pipeline-learning",
+      "verification-quality",
+      "v3-security-overhaul",
+      "github-code-review",
+      "pr-review-aggregate",
+      "skill-builder"
+    ],
+    "pack": [
+      "spec-template",
+      "spec-update",
+      "impact-analysis"
+    ]
+  },
+  "baseFiles": [
+    "_base-project",
+    "_base-spec",
+    "_base-core",
+    "_refs"
+  ],
+  "pipelines": [
+    "feature",
+    "spec",
+    "backend-only",
+    "frontend-only",
+    "cli-only",
+    "push",
+    "pr-review",
+    "ideation"
+  ]
+}
