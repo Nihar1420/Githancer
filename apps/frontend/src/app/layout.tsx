@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/providers/query-provider';
+import { AuthInitializer } from '@/components/auth/AuthInitializer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -16,7 +17,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${inter.variable}`}>
       <body className="min-h-screen bg-gtm-bg text-slate-100 antialiased">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <AuthInitializer />
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

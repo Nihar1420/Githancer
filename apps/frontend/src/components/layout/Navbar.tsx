@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 export function Navbar() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
   const clearUser = useAuthStore((s) => s.clearUser);
 
   async function signOut() {
@@ -24,7 +25,7 @@ export function Navbar() {
           Githancer
         </Link>
         <div className="flex items-center gap-3">
-          {user && (
+          {user ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -34,7 +35,9 @@ export function Navbar() {
               />
               <span className="hidden text-sm text-slate-300 sm:inline">{user.username}</span>
             </>
-          )}
+          ) : isLoading ? (
+            <span className="h-8 w-8 animate-pulse rounded-full bg-slate-700" />
+          ) : null}
           <Button variant="secondary" size="sm" onClick={signOut}>
             Sign out
           </Button>
