@@ -22,6 +22,7 @@ describe('ProjectsService', () => {
     create: jest.fn(),
     save: jest.fn(),
     count: jest.fn(),
+    findOne: jest.fn(),
     delete: jest.fn(),
   };
   const github = { validateBranch: jest.fn() };
@@ -49,6 +50,7 @@ describe('ProjectsService', () => {
       return rows;
     });
     queueRepo.count.mockResolvedValue(0);
+    queueRepo.findOne.mockResolvedValue(null);
     github.validateBranch.mockResolvedValue(true);
     users.getDecryptedToken.mockResolvedValue('tok');
     users.findById.mockResolvedValue({ id: 'user-1' });

@@ -33,6 +33,13 @@ export interface StatusSummary {
   nextScheduledAt: string | null;
 }
 
+export interface CommitMessageContext {
+  repoFullName: string;
+  branch: string;
+  recentMessages: string[];
+  projectDescription?: string;
+}
+
 export class ApiClient {
   private readonly http: AxiosInstance;
 
@@ -107,6 +114,20 @@ export class ApiClient {
       };
     } catch (error) {
       return this.fail(error);
+    }
+  }
+
+  /** Ask the backend for an AI commit-message suggestion. Returns null if unavailable. */
+  async suggestCommit(context: CommitMessageContext): Promise<string | null> {
+    try {
+      const { data } = await this.http.post<{ suggestion: string }>(
+        '/api/v1/ai/suggest-commit',
+        context,
+      );
+      return data.suggestion;
+    } catch {
+      // AI not configured (503), offline, or rate-limited — fall back silently.
+      return null;
     }
   }
 }

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { SchedulerInput, SchedulingMode } from '@gtm/common';
+import { In, Repository } from 'typeorm';
+import { QueueStats, SchedulerInput, SchedulingMode } from '@gtm/common';
 import { generateSchedule } from '@gtm/scheduler';
 import { Project } from './project.entity';
 import { CommitQueue, CommitStatus } from '../commit-queue/commit-queue.entity';
@@ -9,15 +9,10 @@ import { CreateProjectDto } from './dtos/create-project.dto';
 import { GithubService } from '../github/github.service';
 import { UsersService } from '../users/users.service';
 
-export interface QueueStats {
-  total: number;
-  pending: number;
-  executed: number;
-}
-
 export interface ProjectDetail {
   project: Project;
   queueStats: QueueStats;
+  nextScheduledAt: Date | null;
 }
 
 @Injectable()
@@ -84,11 +79,14 @@ export class ProjectsService {
     return this.detail(userId, saved.id);
   }
 
-  async list(userId: string): Promise<Project[]> {
-    return this.projects.find({
+  async list(userId: string): Promise<ProjectDetail[]> {
+    const projects = await this.projects.find({
       where: { owner: { id: userId } },
       order: { createdAt: 'DESC' },
     });
+    return Promise.all(
+      projects.map(async (project) => ({ project, ...(await this.buildStats(project.id)) })),
+    );
   }
 
   async detail(userId: string, id: string): Promise<ProjectDetail> {
@@ -99,7 +97,7 @@ export class ProjectsService {
     if (!project || project.owner.id !== userId) {
       throw new NotFoundException('Project not found');
     }
-    return { project, queueStats: await this.queueStats(id) };
+    return { project, ...(await this.buildStats(id)) };
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -108,12 +106,27 @@ export class ProjectsService {
     await this.projects.delete({ id });
   }
 
-  private async queueStats(projectId: string): Promise<QueueStats> {
-    const [total, pending, executed] = await Promise.all([
+  private async buildStats(
+    projectId: string,
+  ): Promise<{ queueStats: QueueStats; nextScheduledAt: Date | null }> {
+    const [total, executed, skipped, pending] = await Promise.all([
       this.queue.count({ where: { project: { id: projectId } } }),
-      this.queue.count({ where: { project: { id: projectId }, status: CommitStatus.PENDING } }),
       this.queue.count({ where: { project: { id: projectId }, status: CommitStatus.EXECUTED } }),
+      this.queue.count({ where: { project: { id: projectId }, status: CommitStatus.SKIPPED } }),
+      this.queue.count({
+        where: {
+          project: { id: projectId },
+          status: In([CommitStatus.PENDING, CommitStatus.IN_FLIGHT]),
+        },
+      }),
     ]);
-    return { total, pending, executed };
+    const next = await this.queue.findOne({
+      where: { project: { id: projectId }, status: CommitStatus.PENDING },
+      order: { queueIndex: 'ASC' },
+    });
+    return {
+      queueStats: { total, executed, pending, skipped },
+      nextScheduledAt: next?.scheduledAt ?? null,
+    };
   }
 }

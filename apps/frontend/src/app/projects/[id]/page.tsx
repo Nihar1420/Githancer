@@ -111,7 +111,11 @@ export default function ProjectDetailPage() {
             {entries.length > 0 && <TimelineEditor projectId={id} queue={entries} />}
           </div>
           <div className="lg:col-span-1">
-            <CommitQueueTable projectId={id} />
+            <CommitQueueTable
+              projectId={id}
+              repoFullName={project.repoFullName}
+              branch={project.branch}
+            />
           </div>
         </div>
       </main>

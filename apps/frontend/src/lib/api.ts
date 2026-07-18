@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
   Analytics,
+  CommitMessageContext,
   CreateProjectDto,
   PaginatedQueue,
   ProjectWithStats,
@@ -8,6 +9,20 @@ import type {
   User,
 } from './types';
 import * as mock from './mock-data';
+
+/** Backend GET /analytics/:id shape (nested summary + Postgres DOW). */
+interface BackendFullAnalytics {
+  summary: {
+    totalCommits: number;
+    executedCommits: number;
+    longestStreak: number;
+    peakHour: number;
+    completionPercentage: number;
+  };
+  dailyCommits: { date: string; count: number }[];
+  weeklyTrends: { weekStart: string; count: number }[];
+  activeHours: { dayOfWeek: number; hour: number; count: number }[];
+}
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 /** Mock mode is ON unless explicitly disabled — lets the UI run without a backend. */
@@ -106,7 +121,29 @@ export const api = {
   analytics: {
     async get(projectId: string): Promise<Analytics> {
       if (USE_MOCK) return mocked(mock.getMockAnalytics(projectId));
-      return (await http.get<Analytics>(`/api/v1/analytics/${projectId}`)).data;
+      const full = (await http.get<BackendFullAnalytics>(`/api/v1/analytics/${projectId}`)).data;
+      // Adapt backend shape → flat frontend shape (Sunday=0 → Monday=0).
+      return {
+        totalCommits: full.summary.totalCommits,
+        completed: full.summary.executedCommits,
+        longestStreak: full.summary.longestStreak,
+        peakHour: full.summary.peakHour,
+        dailyCommits: full.dailyCommits,
+        activeHours: full.activeHours.map((a) => ({
+          day: (a.dayOfWeek + 6) % 7,
+          hour: a.hour,
+          count: a.count,
+        })),
+      };
+    },
+  },
+  ai: {
+    async suggestCommitMessage(context: CommitMessageContext): Promise<{ suggestion: string }> {
+      if (USE_MOCK) {
+        const repo = context.repoFullName.split('/')[1] ?? 'project';
+        return mocked({ suggestion: `chore: update ${repo} configuration` });
+      }
+      return (await http.post<{ suggestion: string }>('/api/v1/ai/suggest-commit', context)).data;
     },
   },
 };

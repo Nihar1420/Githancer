@@ -10,6 +10,8 @@ import { UsersModule } from './users/users.module';
 import { GithubModule } from './github/github.module';
 import { ProjectsModule } from './projects/projects.module';
 import { CommitQueueModule } from './commit-queue/commit-queue.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AiModule } from './ai/ai.module';
 import { HealthController } from './health/health.controller';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
@@ -42,6 +44,8 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     GithubModule,
     ProjectsModule,
     CommitQueueModule,
+    AnalyticsModule,
+    AiModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService, { provide: APP_GUARD, useClass: JwtAuthGuard }],

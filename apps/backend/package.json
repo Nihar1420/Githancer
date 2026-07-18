@@ -24,6 +24,7 @@
     "migration:revert": "typeorm-ts-node-commonjs -d ./src/database/data-source.ts migration:revert"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
     "@gtm/common": "workspace:*",
     "@gtm/scheduler": "workspace:*",
     "@nestjs/common": "^10.0.0",

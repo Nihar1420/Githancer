@@ -89,6 +89,13 @@ export interface Analytics {
   activeHours: ActiveHourCell[];
 }
 
+export interface CommitMessageContext {
+  repoFullName: string;
+  branch: string;
+  recentMessages: string[];
+  projectDescription?: string;
+}
+
 export const SCHEDULING_MODES: { value: SchedulingMode; label: string; description: string }[] = [
   { value: 'linear', label: 'Linear', description: 'Even spread across your date range' },
   { value: 'random', label: 'Random', description: 'Randomized distribution, seeded for reproducibility' },

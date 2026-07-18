@@ -36,4 +36,28 @@ export class GitService {
   async getLastCommitHash(): Promise<string> {
     return (await this.git.revparse(['HEAD'])).trim();
   }
+
+  /** Last N commit messages (subject line only), newest first. */
+  async getRecentMessages(n: number): Promise<string[]> {
+    try {
+      const log = await this.git.log({ maxCount: n });
+      return log.all.map((entry) => entry.message);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Best-effort "owner/repo" from the origin remote URL, or null. */
+  async getRepoFullName(): Promise<string | null> {
+    try {
+      const remotes = await this.git.getRemotes(true);
+      const origin = remotes.find((r) => r.name === 'origin');
+      const url = origin?.refs?.fetch;
+      if (!url) return null;
+      const match = url.match(/[/:]([^/:]+\/[^/]+?)(?:\.git)?$/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  }
 }

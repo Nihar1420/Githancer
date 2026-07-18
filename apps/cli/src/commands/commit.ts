@@ -32,8 +32,34 @@ export function registerCommit(program: Command): void {
         let message = options.message;
         if (!message) {
           const rl = createInterface({ input: process.stdin, output: process.stdout });
-          message = (await rl.question('Commit message: ')).trim();
-          rl.close();
+          try {
+            const recentMessages = await git.getRecentMessages(5);
+            const repoFullName = (await git.getRepoFullName()) ?? config.projectId;
+            const suggestion = await api.suggestCommit({
+              repoFullName,
+              branch: config.branch,
+              recentMessages,
+            });
+            if (suggestion) {
+              console.log(chalk.cyan(`AI suggests: ${suggestion}`));
+              const choice = (
+                await rl.question('[A]ccept / [E]dit / [S]kip (manual): ')
+              )
+                .trim()
+                .toLowerCase();
+              if (choice === 'e') {
+                message = (await rl.question(`Message [${suggestion}]: `)).trim() || suggestion;
+              } else if (choice === 's') {
+                message = (await rl.question('Commit message: ')).trim();
+              } else {
+                message = suggestion; // accept (default)
+              }
+            } else {
+              message = (await rl.question('Commit message: ')).trim();
+            }
+          } finally {
+            rl.close();
+          }
         }
         if (!message) {
           console.error(chalk.red('✗ Commit message is required.'));
