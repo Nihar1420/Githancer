@@ -19,7 +19,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @gtm/common build
       - run: pnpm --filter @gtm/scheduler build
-      - run: pnpm --filter @gtm/scheduler test --coverage
+      - run: pnpm --filter @gtm/scheduler test:cov
       - run: pnpm --filter backend build
       - run: pnpm --filter backend test
       - run: pnpm --filter frontend build
