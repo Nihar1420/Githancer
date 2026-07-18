@@ -15,10 +15,16 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     config: ConfigService,
     private readonly users: UsersService,
   ) {
+    // passport-oauth2 rejects an empty clientID, so fall back to a placeholder
+    // when GitHub OAuth isn't configured yet. This lets the app boot (health,
+    // API, mock frontend all work); the OAuth login flow only functions once
+    // real GITHUB_CLIENT_ID / SECRET are set.
     super({
-      clientID: config.get<string>('GITHUB_CLIENT_ID') ?? '',
-      clientSecret: config.get<string>('GITHUB_CLIENT_SECRET') ?? '',
-      callbackURL: config.get<string>('GITHUB_CALLBACK_URL') ?? '',
+      clientID: config.get<string>('GITHUB_CLIENT_ID') || 'not-configured',
+      clientSecret: config.get<string>('GITHUB_CLIENT_SECRET') || 'not-configured',
+      callbackURL:
+        config.get<string>('GITHUB_CALLBACK_URL') ||
+        'http://localhost:3001/api/v1/auth/github/callback',
       scope: ['user:email'],
     });
   }

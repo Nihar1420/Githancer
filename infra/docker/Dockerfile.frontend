@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+# ─── Stage 1: builder ─────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/backend/package.json apps/backend/
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/cli/package.json apps/cli/
+COPY packages/common/package.json packages/common/
+COPY packages/scheduler/package.json packages/scheduler/
+RUN pnpm install --frozen-lockfile --filter frontend...
+
+COPY apps/frontend/ apps/frontend/
+
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_USE_MOCK=false
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_USE_MOCK=$NEXT_PUBLIC_USE_MOCK
+RUN pnpm --filter frontend build
+
+# ─── Stage 2: runner ──────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+RUN addgroup -S gtm && adduser -S gtm -G gtm
+
+COPY --from=builder /app/apps/frontend/.next/standalone ./
+COPY --from=builder /app/apps/frontend/.next/static apps/frontend/.next/static
+COPY --from=builder /app/apps/frontend/public apps/frontend/public
+
+USER gtm
+EXPOSE 3000
+CMD ["node", "apps/frontend/server.js"]

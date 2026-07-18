@@ -1,0 +1,46 @@
+# syntax=docker/dockerfile:1
+
+# ─── Stage 1: builder ─────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+# All workspace manifests are needed for a frozen-lockfile install.
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/backend/package.json apps/backend/
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/cli/package.json apps/cli/
+COPY packages/common/package.json packages/common/
+COPY packages/scheduler/package.json packages/scheduler/
+RUN pnpm install --frozen-lockfile --filter backend...
+
+COPY apps/backend/ apps/backend/
+COPY packages/ packages/
+RUN pnpm --filter @gtm/common build \
+  && pnpm --filter @gtm/scheduler build \
+  && pnpm --filter backend build
+
+# ─── Stage 2: runner ──────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -S gtm && adduser -S gtm -G gtm
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/backend/package.json apps/backend/
+COPY apps/frontend/package.json apps/frontend/
+COPY apps/cli/package.json apps/cli/
+COPY packages/common/package.json packages/common/
+COPY packages/scheduler/package.json packages/scheduler/
+RUN pnpm install --frozen-lockfile --prod --filter backend...
+
+COPY --from=builder /app/apps/backend/dist apps/backend/dist
+COPY --from=builder /app/packages/common/dist packages/common/dist
+COPY --from=builder /app/packages/scheduler/dist packages/scheduler/dist
+
+USER gtm
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD wget -qO- http://localhost:3001/api/v1/health || exit 1
+CMD ["node", "apps/backend/dist/main.js"]
