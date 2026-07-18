@@ -16,7 +16,7 @@ describe('AuthController', () => {
     expect(res.cookie).toHaveBeenCalledWith(
       'gtm_token',
       'tok',
-      expect.objectContaining({ httpOnly: true, sameSite: 'lax' }),
+      expect.objectContaining({ httpOnly: true, sameSite: 'none', secure: true }),
     );
     expect(res.redirect).toHaveBeenCalledWith('http://localhost:3000/auth/callback');
   });
@@ -28,7 +28,10 @@ describe('AuthController', () => {
     );
     const res = { clearCookie: jest.fn() } as unknown as Response;
     const result = controller.logout(res);
-    expect(res.clearCookie).toHaveBeenCalledWith('gtm_token');
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'gtm_token',
+      expect.objectContaining({ sameSite: 'none', secure: true }),
+    );
     expect(result).toEqual({ message: 'Logged out' });
   });
 });
