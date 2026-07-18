@@ -40,9 +40,12 @@ export class AuthController {
     @Res() res: Response,
   ): void {
     const token = this.authService.issueJwt(req.user.userId, req.user.username);
+    // Cross-origin (Vercel frontend ↔ Railway backend) requires sameSite:'none',
+    // which browsers only accept alongside secure:true (HTTPS).
     res.cookie(COOKIE_NAME, token, {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'none',
+      secure: true,
       maxAge: COOKIE_MAX_AGE,
     });
     res.redirect(`${this.config.get<string>('FRONTEND_URL')}/auth/callback`);
@@ -61,7 +64,8 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { message: string } {
-    res.clearCookie(COOKIE_NAME);
+    // Clear options must match the set options for the cookie to be removed.
+    res.clearCookie(COOKIE_NAME, { httpOnly: true, sameSite: 'none', secure: true });
     return { message: 'Logged out' };
   }
 }

@@ -19,7 +19,12 @@ function cookieExtractor(req: Request): string | null {
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
+      // Prefer the httpOnly cookie; fall back to an Authorization: Bearer token
+      // for setups where the cross-origin cookie is blocked.
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        cookieExtractor,
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       secretOrKey: config.get<string>('JWT_SECRET') ?? '',
       ignoreExpiration: false,
     });
