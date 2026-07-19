@@ -43,17 +43,40 @@ export class GithubService {
     return data.map((branch) => branch.name);
   }
 
+  private static errorStatus(error: unknown): number | undefined {
+    if (typeof error === 'object' && error !== null && 'status' in error) {
+      const status = (error as { status?: unknown }).status;
+      return typeof status === 'number' ? status : undefined;
+    }
+    return undefined;
+  }
+
   async validateBranch(
     accessToken: string,
     owner: string,
     repo: string,
     branch: string,
   ): Promise<boolean> {
+    console.log(`[github] validating branch ${owner}/${repo}#${branch}`);
     const octokit = await this.createClient(accessToken);
     try {
       await octokit.rest.repos.getBranch({ owner, repo, branch });
       return true;
-    } catch {
+    } catch (error) {
+      const status = GithubService.errorStatus(error);
+      if (status === 404) {
+        return false; // repo or branch not found, or the token can't see it
+      }
+      if (status === 401 || status === 403) {
+        throw new Error(
+          `GitHub auth failed (${status}) validating ${owner}/${repo} — token may lack 'repo' scope`,
+        );
+      }
+      console.warn(
+        `[github] branch validation error for ${owner}/${repo}#${branch}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       return false;
     }
   }

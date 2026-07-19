@@ -9,6 +9,15 @@ import { CreateProjectDto } from './dtos/create-project.dto';
 import { GithubService } from '../github/github.service';
 import { UsersService } from '../users/users.service';
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms),
+    ),
+  ]);
+}
+
 export interface ProjectDetail {
   project: Project;
   queueStats: QueueStats;
@@ -32,10 +41,26 @@ export class ProjectsService {
       throw new BadRequestException('repoFullName must be in "owner/repo" form');
     }
 
-    const token = await this.users.getDecryptedToken(userId);
-    const branchOk = await this.github.validateBranch(token, owner, repo, dto.branch);
-    if (!branchOk) {
-      throw new BadRequestException('Repository or branch could not be validated');
+    // Best-effort branch validation — never block creation on it. Auth/scope,
+    // rate-limit, 404, or timeout issues just log a warning and proceed; a real
+    // branch problem surfaces later when the CLI pushes.
+    try {
+      const token = await this.users.getDecryptedToken(userId);
+      const branchOk = await withTimeout(
+        this.github.validateBranch(token, owner, repo, dto.branch),
+        5000,
+      );
+      if (!branchOk) {
+        console.warn(
+          `[projects] Could not confirm ${dto.repoFullName}#${dto.branch}; creating anyway.`,
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `[projects] Skipping branch validation for ${dto.repoFullName}#${dto.branch}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
 
     const input: SchedulerInput = {

@@ -80,8 +80,15 @@ describe('ProjectsService', () => {
     expect(new Set(iso).size).toBe(10);
   });
 
-  it('rejects creation when the branch cannot be validated', async () => {
+  it('still creates the project when branch validation is inconclusive (advisory only)', async () => {
     github.validateBranch.mockResolvedValue(false);
-    await expect(service.create('user-1', dto)).rejects.toThrow();
+    await expect(service.create('user-1', dto)).resolves.toBeDefined();
+    expect(savedQueueRows).toHaveLength(10);
+  });
+
+  it('still creates the project when branch validation throws (auth/scope error)', async () => {
+    github.validateBranch.mockRejectedValue(new Error('GitHub auth failed (403)'));
+    await expect(service.create('user-1', dto)).resolves.toBeDefined();
+    expect(savedQueueRows).toHaveLength(10);
   });
 });
