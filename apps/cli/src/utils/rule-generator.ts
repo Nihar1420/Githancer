@@ -7,46 +7,44 @@ const MARKER = 'Githancer — commit rule';
 
 const CLAUDE_RULE = `# Githancer — commit rule
 
-This project uses Githancer for Git timeline management.
+This project uses Githancer to manage commit timestamps.
 
-CRITICAL: Never run \`git commit\` directly.
+## Rule
+
+Never run \`git commit\` directly.
 Always use \`timeline commit\` instead.
 
-Workflow:
-- Stage changes normally (git add)
-- Run: timeline commit -m "your message"
-- When ready to push: timeline push
-- To check queue: timeline status
-- If cache empty: timeline sync
+This keeps commits consistent with the project's scheduled queue.
+Direct git commits bypass the queue and create timestamp inconsistencies.
 
-The timeline CLI backdates commits to scheduled timestamps.
-Direct git commits bypass the schedule and break the timeline.
+## Commands
+
+- Commit:       timeline commit -m "your message"
+- Push:         timeline push
+- Queue status: timeline status
+- Refill cache: timeline sync
 `;
 
 const CURSOR_RULE = `---
-description: Githancer commit rules for this project
+description: Githancer commit rule
 alwaysApply: true
 ---
 
 # Githancer — commit rule
 
-Never use \`git commit\` directly in this project.
-Always use \`timeline commit -m "message"\` instead.
-
-Commands:
-- Commit: timeline commit -m "message"
-- Push: timeline push
-- Status: timeline status
-- Refill cache: timeline sync
+This project uses Githancer to manage commit timestamps.
+Never use git commit directly.
+Always use: timeline commit -m "your message"
+Push with:  timeline push
 `;
 
 const COPILOT_APPEND = `
 ## Githancer — commit rule
 
-This project uses Githancer for Git timeline management.
-Never suggest or run \`git commit\` directly.
-Always use \`timeline commit -m "message"\` for commits
-and \`timeline push\` to push.
+This project uses Githancer to manage commit timestamps.
+Never suggest git commit directly.
+Always use: timeline commit -m "message"
+Push with:  timeline push
 `;
 
 const COPILOT_NEW = `# GitHub Copilot Instructions
@@ -54,35 +52,41 @@ ${COPILOT_APPEND}`;
 
 const AGENTS_NEW = `# Githancer — commit rule
 
+This project uses Githancer to manage commit timestamps.
+
 Never run git commit directly.
-Use: timeline commit -m "message"
-Push: timeline push
+Always use: timeline commit -m "your message"
+Push with:  timeline push
 `;
 
 const AGENTS_APPEND = `
 ## Githancer — commit rule
+
+This project uses Githancer to manage commit timestamps.
 Never run git commit directly.
-Use: timeline commit -m "message"
+Always use: timeline commit -m "your message"
+Push with:  timeline push
 `;
 
-const STANDALONE = `# Githancer — AI Agent Commit Rules
+const STANDALONE = `# Githancer — commit rule
 
-This project uses **Githancer** for Git timeline management. Commits are dated to
-a schedule, so AI agents and contributors must commit through the \`timeline\` CLI
-instead of \`git\` directly.
+This project uses Githancer to manage commit timestamps.
 
-## The one rule
+## Rule
 
-NEVER run \`git commit\` directly. ALWAYS use \`timeline commit\`.
-Direct git commits bypass the schedule and break the timeline.
+Never run \`git commit\` directly.
+Always use \`timeline commit\` instead.
+
+Commits are stamped with the next timestamp from the project's scheduled
+queue. Direct git commits bypass the queue and create timestamp
+inconsistencies.
 
 ## Commands
 
-- Stage: \`git add\` (as normal)
-- Commit: \`timeline commit -m "your message"\`
-- Push: \`timeline push\`
-- Status: \`timeline status\`
-- Refill cache (if empty): \`timeline sync\`
+- Commit:       timeline commit -m "your message"
+- Push:         timeline push
+- Queue status: timeline status
+- Refill cache: timeline sync
 
 ## Where to put these rules for your tool
 
@@ -129,6 +133,29 @@ async function appendOrCreate(
 }
 
 /**
+ * Replace the existing Githancer block in a shared file with the latest one.
+ * The block starts at the `## Githancer — commit rule` heading and runs until
+ * the next `## ` heading or EOF. If the file has no block, append it instead.
+ */
+async function replaceBlock(fullPath: string, appendBlock: string): Promise<void> {
+  const existing = await readFile(fullPath, 'utf8');
+  const headingRe = /^##\s+Githancer — commit rule\s*$/m;
+  const start = existing.search(headingRe);
+  if (start === -1) {
+    await appendFile(fullPath, appendBlock, 'utf8');
+    return;
+  }
+  const rest = existing.slice(start);
+  const nextHeading = rest.slice(1).search(/^##\s+/m);
+  const end = nextHeading === -1 ? existing.length : start + 1 + nextHeading;
+  const updated =
+    existing.slice(0, start).replace(/\n+$/, '\n') +
+    appendBlock.replace(/^\n/, '') +
+    existing.slice(end);
+  await writeFile(fullPath, updated, 'utf8');
+}
+
+/**
  * Write / append the appropriate rule for a tool. `standalone` always writes
  * GITHANCER_AGENTS.md. Returns the project-relative path that was created or
  * modified.
@@ -165,4 +192,65 @@ export async function injectRule(
     default:
       throw new Error(`No rule template for tool: ${tool.tool}`);
   }
+}
+
+/**
+ * Refresh an existing rule file for a tool with the latest content.
+ * Dedicated files are overwritten; shared files (Copilot, AGENTS.md) have
+ * only their Githancer block replaced. Returns the project-relative path
+ * that was updated, or null if the tool has no rule file yet.
+ */
+export async function refreshRule(tool: DetectedWorkflow): Promise<string | null> {
+  const cwd = process.cwd();
+
+  switch (tool.tool) {
+    case 'claude_code': {
+      const p = join(cwd, '.claude', 'rules', 'githancer.md');
+      if (!(await pathExists(p))) return null;
+      await writeFile(p, CLAUDE_RULE, 'utf8');
+      return '.claude/rules/githancer.md';
+    }
+    case 'cursor': {
+      const p = join(cwd, '.cursor', 'rules', 'githancer.mdc');
+      if (!(await pathExists(p))) return null;
+      await writeFile(p, CURSOR_RULE, 'utf8');
+      return '.cursor/rules/githancer.mdc';
+    }
+    case 'copilot': {
+      const p = join(cwd, '.github', 'copilot-instructions.md');
+      if (!(await pathExists(p))) return null;
+      const existing = await readFile(p, 'utf8');
+      if (!existing.includes(MARKER)) return null;
+      await replaceBlock(p, COPILOT_APPEND);
+      return '.github/copilot-instructions.md';
+    }
+    case 'aider':
+    case 'agents_md': {
+      const p = join(cwd, 'AGENTS.md');
+      if (!(await pathExists(p))) return null;
+      const existing = await readFile(p, 'utf8');
+      if (!existing.includes(MARKER)) return null;
+      // A pure-Githancer AGENTS.md (created by us) is overwritten whole;
+      // otherwise only the Githancer block is replaced.
+      if (existing.trimStart().startsWith('# Githancer')) {
+        await writeFile(p, AGENTS_NEW, 'utf8');
+      } else {
+        await replaceBlock(p, AGENTS_APPEND);
+      }
+      return 'AGENTS.md';
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Refresh a standalone GITHANCER_AGENTS.md if present. Returns the path or
+ * null when the file doesn't exist.
+ */
+export async function refreshStandalone(): Promise<string | null> {
+  const p = join(process.cwd(), 'GITHANCER_AGENTS.md');
+  if (!(await pathExists(p))) return null;
+  await writeFile(p, STANDALONE, 'utf8');
+  return 'GITHANCER_AGENTS.md';
 }

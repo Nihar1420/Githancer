@@ -9,6 +9,7 @@ import { registerCommit } from './commands/commit';
 import { registerPush } from './commands/push';
 import { registerStatus } from './commands/status';
 import { registerHandleAuth } from './commands/handle-auth';
+import { registerUpdateRules } from './commands/update-rules';
 
 const pkg = JSON.parse(
   readFileSync(join(__dirname, '..', 'package.json'), 'utf8'),
@@ -27,6 +28,7 @@ registerCommit(program);
 registerPush(program);
 registerStatus(program);
 registerHandleAuth(program);
+registerUpdateRules(program);
 
 program.parse(process.argv);
 
