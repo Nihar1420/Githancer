@@ -102,6 +102,17 @@ export function registerCommit(program: Command): void {
         console.log(
           chalk.green(`✓ Committed ${hash.slice(0, 7)} as of ${new Date(timestamp).toLocaleString()}`),
         );
+
+        // Auto-push after a successful commit. A push failure is non-fatal:
+        // the commit is already saved locally, so warn and let the user retry.
+        try {
+          await git.push(config.branch);
+          console.log(chalk.green(`✓ Pushed to ${config.branch}`));
+        } catch (pushError) {
+          const reason = pushError instanceof Error ? pushError.message : String(pushError);
+          console.log(chalk.yellow(`⚠ Push failed: ${reason}`));
+          console.log(chalk.yellow('  Run "timeline push" to retry.'));
+        }
       } catch (error) {
         handleCliError(error);
       }
