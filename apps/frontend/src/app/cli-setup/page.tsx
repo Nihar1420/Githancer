@@ -12,6 +12,7 @@ import { LoadingState, ErrorState } from '@/components/ui/States';
 import type { CliSetupData } from '@/lib/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://githancer-production.up.railway.app';
+const CLI_CALLBACK_PORT = 7842;
 
 function CopyButton({ value, disabled }: { value: string; disabled?: boolean }) {
   const [copied, setCopied] = useState(false);
@@ -31,17 +32,26 @@ function CopyButton({ value, disabled }: { value: string; disabled?: boolean }) 
   );
 }
 
-function buildDeepLink(userId: string, apiKey: string, projectId: string | null): string {
-  const params = new URLSearchParams({ userId, apiKey, apiUrl: API_URL });
-  if (projectId) {
-    params.set('projectId', projectId);
+/** Build the full param set the CLI needs so it can configure with zero prompts. */
+function buildHandoffParams(data: CliSetupData, project: CliSetupData['projects'][number] | null): URLSearchParams {
+  const params = new URLSearchParams({
+    userId: data.userId,
+    apiKey: data.apiKeyFull ?? '',
+    apiUrl: API_URL,
+  });
+  if (project) {
+    params.set('projectId', project.id);
+    params.set('branch', project.branch);
+    params.set('repo', project.repoFullName);
+    params.set('repoFullName', project.repoFullName);
   }
-  return `githancer://auth?${params.toString()}`;
+  return params;
 }
 
 function CliSetupContent() {
   const searchParams = useSearchParams();
   const preselected = searchParams.get('projectId');
+  const cliWaiting = searchParams.get('source') === 'cli';
 
   const [data, setData] = useState<CliSetupData | null>(null);
   const [error, setError] = useState(false);
@@ -91,7 +101,19 @@ function CliSetupContent() {
 
   function handleSend() {
     if (!data || !data.apiKeyFull) return;
-    window.location.href = buildDeepLink(data.userId, data.apiKeyFull, selectedProjectId);
+    const params = buildHandoffParams(data, selectedProject);
+    const query = params.toString();
+
+    // Method B — local server (macOS + universal fallback). Fire-and-forget:
+    // the request reaches the CLI's server even though the opaque response is
+    // unreadable from JS.
+    fetch(`http://localhost:${CLI_CALLBACK_PORT}/callback?${query}`, { mode: 'no-cors' }).catch(
+      () => {},
+    );
+
+    // Method A — deep link (Linux/Windows). Whichever the CLI receives first wins.
+    window.location.href = `githancer://auth?${query}`;
+
     setSent(true);
   }
 
@@ -104,6 +126,12 @@ function CliSetupContent() {
       <p className="mt-1 text-sm text-gtm-muted">
         Use these to configure the Githancer CLI on any machine.
       </p>
+
+      {cliWaiting && (
+        <div className="mt-4 rounded-lg border border-indigo-500 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-200">
+          ✓ CLI connected — select your project and click <span className="font-medium">Send to CLI</span>.
+        </div>
+      )}
 
       {/* Section 1 — credentials */}
       <section className="mt-8 space-y-3">
@@ -201,14 +229,12 @@ function CliSetupContent() {
       {/* Section 3 — send to CLI / manual */}
       <section className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-gtm-border bg-gtm-surface p-5">
-          <Button className="w-full" onClick={handleSend} disabled={!fullKey}>
-            Send to CLI
+          <Button className="w-full" onClick={handleSend} disabled={!fullKey || sent}>
+            {sent ? 'Sent' : 'Send to CLI'}
           </Button>
-          <p className="mt-2 text-xs text-gtm-muted">Opens automatically in your terminal.</p>
+          <p className="mt-2 text-xs text-gtm-muted">Delivered straight to your terminal.</p>
           {sent && (
-            <p className="mt-2 text-xs text-gtm-success">
-              ✓ Sent! If nothing happened, use manual setup.
-            </p>
+            <p className="mt-2 text-xs text-gtm-success">✓ Sent to CLI! Check your terminal.</p>
           )}
           {!fullKey && (
             <p className="mt-2 text-xs text-gtm-muted">Regenerate your key first to enable this.</p>
@@ -225,24 +251,21 @@ function CliSetupContent() {
           </button>
           {manualOpen && (
             <div className="mt-3 space-y-2 text-xs text-gtm-muted">
-              <p>Run these in your terminal:</p>
-              <pre className="rounded bg-gtm-bg p-2 font-mono text-slate-200">timeline init</pre>
-              <pre className="rounded bg-gtm-bg p-2 font-mono text-slate-200">timeline login</pre>
-              <p>When prompted, enter:</p>
-              <div className={rowClass}>
-                <span className={monoClass}>API URL: {API_URL}</span>
-                <CopyButton value={API_URL} />
-              </div>
-              <div className={rowClass}>
-                <span className={monoClass}>User ID: {data.userId}</span>
-                <CopyButton value={data.userId} />
-              </div>
-              {selectedProject && (
-                <div className={rowClass}>
-                  <span className={monoClass}>Project ID: {selectedProject.id}</span>
-                  <CopyButton value={selectedProject.id} />
-                </div>
-              )}
+              <p>
+                If “Send to CLI” didn’t work, just run <span className="font-mono">timeline init</span>{' '}
+                again — it reopens this page. Or create{' '}
+                <span className="font-mono">.timeline.json</span> in your repo by hand:
+              </p>
+              <pre className="overflow-x-auto rounded bg-gtm-bg p-2 font-mono text-slate-200">
+{`{
+  "apiUrl": "${API_URL}",
+  "userId": "${data.userId}",
+  "apiKey": "${fullKey ?? '<regenerate to view>'}",
+  "projectId": "${selectedProject?.id ?? ''}",
+  "branch": "${selectedProject?.branch ?? 'main'}",
+  "repoFullName": "${selectedProject?.repoFullName ?? ''}"
+}`}
+              </pre>
               <div className={rowClass}>
                 <span className={monoClass}>API Key: {fullKey ? displayKey : '(regenerate to view)'}</span>
                 <CopyButton value={fullKey ?? ''} disabled={!fullKey} />

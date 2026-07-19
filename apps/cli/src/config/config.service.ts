@@ -7,6 +7,7 @@ export interface TimelineConfig {
   branch: string;
   apiUrl: string;
   apiKey: string;
+  repoFullName?: string;
 }
 
 const CONFIG_FILE = '.timeline.json';
