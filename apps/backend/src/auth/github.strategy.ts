@@ -25,7 +25,10 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
       callbackURL:
         config.get<string>('GITHUB_CALLBACK_URL') ||
         'http://localhost:3001/api/v1/auth/github/callback',
-      scope: ['user:email'],
+      // 'repo' is required for classic OAuth to see private repositories.
+      // (GitHub has no read-only private scope for OAuth Apps.) Expanding the
+      // scope also forces existing users to re-authorize on their next login.
+      scope: ['user:email', 'repo'],
     });
   }
 

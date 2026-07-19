@@ -20,7 +20,12 @@ export class GithubService {
 
   async listUserRepos(accessToken: string): Promise<RepoSummary[]> {
     const octokit = await this.createClient(accessToken);
+    // NOTE: `type` is mutually exclusive with `visibility`/`affiliation` on this
+    // endpoint (GitHub returns 422 if combined). Use visibility + affiliation to
+    // get the user's OWN repos including private ones.
     const { data } = await octokit.rest.repos.listForAuthenticatedUser({
+      visibility: 'all',
+      affiliation: 'owner',
       per_page: 100,
       sort: 'pushed',
     });
