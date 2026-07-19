@@ -57,7 +57,7 @@ export class ApiClient {
   private fail(error: unknown): never {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        throw new CLIAuthError('Run "timeline login" to re-authenticate');
+        throw new CLIAuthError('Run "timeline init" to re-authenticate');
       }
       if (!error.response) {
         throw new CLIOfflineError('No connection — using cached timestamps');

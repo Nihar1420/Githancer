@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -17,7 +17,7 @@ import { CliOrJwtAuthGuard } from './guards/cli-auth.guard';
   imports: [
     PassportModule,
     UsersModule,
-    ProjectsModule,
+    forwardRef(() => ProjectsModule),
     TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync({
       inject: [ConfigService],

@@ -6,10 +6,13 @@ import {
   HttpCode,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dtos/create-project.dto';
 import { CurrentUserId } from '../common/current-user.decorator';
+import { Public } from '../auth/public.decorator';
+import { CliOrJwtAuthGuard } from '../auth/guards/cli-auth.guard';
 
 @Controller('projects')
 export class ProjectsController {
@@ -25,6 +28,10 @@ export class ProjectsController {
     return this.projectsService.list(userId);
   }
 
+  // Accepts CLI Bearer key OR dashboard JWT cookie — `timeline status` reads
+  // project detail (queue stats) over the CLI key.
+  @Public()
+  @UseGuards(CliOrJwtAuthGuard)
   @Get(':id')
   detail(@CurrentUserId() userId: string, @Param('id') id: string) {
     return this.projectsService.detail(userId, id);

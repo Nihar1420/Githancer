@@ -42,6 +42,10 @@ export class CommitQueueController {
     return this.commitQueueService.markExecuted(userId, id, status, dto.commitHash);
   }
 
+  // Accepts CLI Bearer key OR dashboard JWT cookie — `timeline sync` reads the
+  // queue over the CLI key, the dashboard reads it over the cookie.
+  @Public()
+  @UseGuards(CliOrJwtAuthGuard)
   @Get('projects/:id/queue')
   list(
     @CurrentUserId() userId: string,
