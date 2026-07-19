@@ -127,7 +127,7 @@ Open a project, then click **View analytics →**.
 **Prerequisites:** Node.js 20+ and Git.
 
 ```bash
-npm install -g git-timeline-manager-cli
+npm install -g githancer-cli
 timeline --help      # verify — lists all 6 commands
 ```
 
