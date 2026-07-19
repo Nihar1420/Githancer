@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type {
   Analytics,
+  CliSetupData,
   CommitMessageContext,
   CreateProjectDto,
   PaginatedQueue,
@@ -53,6 +54,30 @@ export const api = {
     async logout(): Promise<void> {
       if (USE_MOCK) return mocked(undefined);
       await http.post('/api/v1/auth/logout');
+    },
+    async getCliSetup(): Promise<CliSetupData> {
+      if (USE_MOCK) {
+        const full = `gtm_${'0123456789abcdef'.repeat(3)}a1b2c3d4`;
+        return mocked({
+          userId: mock.mockUser.id,
+          username: mock.mockUser.username,
+          apiKey: `••••••••${full.slice(-8)}`,
+          apiKeyFull: full,
+          hasKey: true,
+          projects: mock.mockProjects.map((p) => ({
+            id: p.project.id,
+            repoFullName: p.project.repoFullName,
+            branch: p.project.branch,
+            status: p.project.status,
+            queueStats: p.queueStats,
+          })),
+        });
+      }
+      return (await http.get<CliSetupData>('/api/v1/auth/cli-setup')).data;
+    },
+    async regenerateCliKey(): Promise<{ apiKey: string }> {
+      if (USE_MOCK) return mocked({ apiKey: `gtm_regen_${'fedcba9876543210'.repeat(3)}` });
+      return (await http.post<{ apiKey: string }>('/api/v1/auth/cli-setup/regenerate')).data;
     },
   },
   users: {

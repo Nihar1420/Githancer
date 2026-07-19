@@ -96,6 +96,23 @@ export interface CommitMessageContext {
   projectDescription?: string;
 }
 
+export interface CliSetupProject {
+  id: string;
+  repoFullName: string;
+  branch: string;
+  status: string;
+  queueStats: QueueStats;
+}
+
+export interface CliSetupData {
+  userId: string;
+  username: string;
+  apiKey: string;
+  apiKeyFull: string | null;
+  hasKey: boolean;
+  projects: CliSetupProject[];
+}
+
 export const SCHEDULING_MODES: { value: SchedulingMode; label: string; description: string }[] = [
   { value: 'linear', label: 'Linear', description: 'Even spread across your date range' },
   { value: 'random', label: 'Random', description: 'Randomized distribution, seeded for reproducibility' },

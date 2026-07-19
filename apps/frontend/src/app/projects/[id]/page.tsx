@@ -82,6 +82,12 @@ export default function ProjectDetailPage() {
               >
                 View analytics →
               </Link>
+              <Link
+                href={`/cli-setup?projectId=${id}`}
+                className="text-sm text-gtm-accent hover:underline"
+              >
+                Set up CLI →
+              </Link>
             </div>
           </div>
           <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>

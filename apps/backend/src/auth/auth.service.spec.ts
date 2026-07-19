@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
+import { ProjectsService } from '../projects/projects.service';
 import { User } from '../users/user.entity';
 
 describe('AuthService', () => {
@@ -17,6 +18,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: JwtService, useValue: jwt },
         { provide: getRepositoryToken(User), useValue: usersRepo },
+        { provide: ProjectsService, useValue: { list: jest.fn().mockResolvedValue([]) } },
       ],
     }).compile();
     service = moduleRef.get(AuthService);

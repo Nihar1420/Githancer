@@ -25,6 +25,12 @@ export function Navbar() {
           Githancer
         </Link>
         <div className="flex items-center gap-3">
+          <Link
+            href="/cli-setup"
+            className="text-sm text-gtm-muted transition-colors hover:text-slate-100"
+          >
+            CLI Setup
+          </Link>
           {user ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}

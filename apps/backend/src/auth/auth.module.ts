@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/user.entity';
 import { UsersModule } from '../users/users.module';
+import { ProjectsModule } from '../projects/projects.module';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { GithubStrategy } from './github.strategy';
@@ -16,6 +17,7 @@ import { CliOrJwtAuthGuard } from './guards/cli-auth.guard';
   imports: [
     PassportModule,
     UsersModule,
+    ProjectsModule,
     TypeOrmModule.forFeature([User]),
     JwtModule.registerAsync({
       inject: [ConfigService],

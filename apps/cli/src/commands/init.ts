@@ -11,6 +11,7 @@ import {
   type WorkflowTool,
 } from '../utils/workflow-detector';
 import { injectRule } from '../utils/rule-generator';
+import { registerProtocolHandler } from '../utils/protocol-handler';
 
 const DEFAULT_API_URL = 'https://api.githancer.com';
 
@@ -102,6 +103,14 @@ export function registerInit(program: Command): void {
         const injected = await configureAiRules(rl);
         for (const path of injected) {
           console.log(chalk.green(`✓ Rule injected → ${path}`));
+        }
+
+        // Register the githancer:// deep-link handler (best-effort).
+        const proto = await registerProtocolHandler(process.argv[1]);
+        if (proto.ok) {
+          console.log(chalk.green('✓ Registered githancer:// protocol handler'));
+        } else {
+          console.log(chalk.yellow(`⚠ ${proto.message}`));
         }
 
         // Summary

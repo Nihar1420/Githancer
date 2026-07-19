@@ -62,6 +62,16 @@ export class AuthController {
     return { message: 'CLI token revoked' };
   }
 
+  @Get('cli-setup')
+  getCliSetup(@CurrentUserId() userId: string) {
+    return this.authService.getCliSetup(userId);
+  }
+
+  @Post('cli-setup/regenerate')
+  async regenerateCliKey(@CurrentUserId() userId: string): Promise<{ apiKey: string }> {
+    return { apiKey: await this.authService.generateCliToken(userId) };
+  }
+
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { message: string } {
     // Clear options must match the set options for the cookie to be removed.
