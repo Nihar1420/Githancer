@@ -1,4 +1,8 @@
 import simpleGit, { SimpleGit } from 'simple-git';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 export class GitService {
   private readonly git: SimpleGit = simpleGit(process.cwd());
@@ -12,21 +16,36 @@ export class GitService {
   }
 
   async stageAll(): Promise<void> {
-    await this.git.add('.');
+    // Spawn git directly rather than via simple-git: simple-git refuses to run
+    // when GIT_ASKPASS is present in the env (VS Code sets it) unless
+    // allowUnsafeAskPass is enabled. A local `git add` never needs askpass.
+    await execFileAsync('git', ['add', '-A'], { cwd: process.cwd() });
   }
 
   /**
    * Commit with a backdated author + committer date so the commit lands on the
    * scheduled point in the timeline.
+   *
+   * Spawns git directly (child_process) instead of simple-git's
+   * `.env(...).commit()` — passing the inherited env (which includes VS Code's
+   * GIT_ASKPASS) through simple-git triggers its "Use of GIT_ASKPASS is not
+   * permitted without enabling allowUnsafeAskPass" guard. A local commit never
+   * invokes askpass, so spawning git ourselves is both safe and correct.
+   * Staging is done separately by stageAll().
    */
   async commitWithDate(message: string, isoDate: string): Promise<string> {
-    const env = {
-      ...process.env,
-      GIT_AUTHOR_DATE: isoDate,
-      GIT_COMMITTER_DATE: isoDate,
-    } as Record<string, string>;
-    const result = await this.git.env(env).commit(message);
-    return result.commit;
+    await execFileAsync('git', ['commit', '-m', message], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        GIT_AUTHOR_DATE: isoDate,
+        GIT_COMMITTER_DATE: isoDate,
+      },
+    });
+    const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: process.cwd(),
+    });
+    return stdout.trim();
   }
 
   async push(branch: string): Promise<void> {
