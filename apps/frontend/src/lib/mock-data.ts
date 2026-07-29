@@ -6,6 +6,7 @@ import type {
   Project,
   ProjectWithStats,
   RepoSummary,
+  UpdateProjectDto,
   User,
 } from './types';
 
@@ -132,6 +133,28 @@ export function createMockProject(dto: CreateProjectDto): ProjectWithStats {
   };
   queues[project.id] = buildQueue(project.id, dto.totalCommits, 0);
   return { project, queueStats: { total: dto.totalCommits, pending: dto.totalCommits, executed: 0 } };
+}
+
+export function updateMockProject(id: string, dto: UpdateProjectDto): ProjectWithStats {
+  const current = getMockProject(id);
+  const totalCommits = dto.totalCommits ?? current.project.totalCommits;
+  const project: Project = {
+    ...current.project,
+    branch: dto.branch ?? current.project.branch,
+    startDate: dto.startDate ?? current.project.startDate,
+    endDate: dto.endDate ?? current.project.endDate,
+    totalCommits,
+    schedulingMode: dto.schedulingMode ?? current.project.schedulingMode,
+    workingDaysOnly: dto.workingDaysOnly ?? current.project.workingDaysOnly,
+    preferredHours: dto.preferredHours ?? current.project.preferredHours,
+  };
+  const executed = current.queueStats.executed;
+  // Preserve executed history, then append the regenerated pending rows.
+  queues[project.id] = buildQueue(project.id, executed + totalCommits, executed);
+  return {
+    project,
+    queueStats: { total: executed + totalCommits, pending: totalCommits, executed },
+  };
 }
 
 export const mockRepos: RepoSummary[] = [

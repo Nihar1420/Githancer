@@ -3,9 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { QueueStats, SchedulerInput, SchedulingMode } from '@gtm/common';
 import { generateSchedule } from '@gtm/scheduler';
-import { Project } from './project.entity';
+import { Project, ProjectStatus } from './project.entity';
 import { CommitQueue, CommitStatus } from '../commit-queue/commit-queue.entity';
 import { CreateProjectDto } from './dtos/create-project.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
 import { GithubService } from '../github/github.service';
 import { UsersService } from '../users/users.service';
 
@@ -102,6 +103,91 @@ export class ProjectsService {
     await this.queue.save(rows);
 
     return this.detail(userId, saved.id);
+  }
+
+  async update(
+    userId: string,
+    projectId: string,
+    dto: UpdateProjectDto,
+  ): Promise<ProjectDetail> {
+    const project = await this.projects.findOne({
+      where: { id: projectId },
+      relations: { owner: true },
+    });
+    if (!project || project.owner.id !== userId) {
+      throw new NotFoundException('Project not found');
+    }
+    if (project.status === ProjectStatus.COMPLETED) {
+      throw new BadRequestException('Completed projects cannot be edited');
+    }
+
+    // Merge incoming changes onto the existing config, then validate the range.
+    const startDate = dto.startDate ?? this.toDateString(project.startDate);
+    const endDate = dto.endDate ?? this.toDateString(project.endDate);
+    if (new Date(endDate).getTime() <= new Date(startDate).getTime()) {
+      throw new BadRequestException('endDate must be after startDate');
+    }
+
+    const totalCommits = dto.totalCommits ?? project.totalCommits;
+    const schedulingMode = (dto.schedulingMode ?? project.schedulingMode) as SchedulingMode;
+    const workingDaysOnly = dto.workingDaysOnly ?? project.workingDaysOnly;
+    const preferredHours =
+      dto.preferredHours ?? project.preferredHours ?? undefined;
+
+    // Apply the new config to the entity.
+    project.startDate = new Date(startDate);
+    project.endDate = new Date(endDate);
+    project.totalCommits = totalCommits;
+    project.schedulingMode = schedulingMode;
+    if (dto.branch !== undefined) project.branch = dto.branch;
+    project.workingDaysOnly = workingDaysOnly;
+    project.preferredHours = dto.preferredHours ?? project.preferredHours;
+
+    // Preserve history: only the not-yet-run entries are recalculated. Executed
+    // and skipped rows stay, and the new queue continues after the last one.
+    const lastKept = await this.queue.findOne({
+      where: {
+        project: { id: projectId },
+        status: In([CommitStatus.EXECUTED, CommitStatus.SKIPPED]),
+      },
+      order: { queueIndex: 'DESC' },
+    });
+    const indexOffset = (lastKept?.queueIndex ?? -1) + 1;
+
+    await this.queue.delete({
+      project: { id: projectId },
+      status: In([CommitStatus.PENDING, CommitStatus.IN_FLIGHT]),
+    });
+
+    const input: SchedulerInput = {
+      mode: schedulingMode,
+      startDate,
+      endDate,
+      totalCommits,
+      seed: `${userId}:${project.repoFullName}:${startDate}:${endDate}`,
+      workingDaysOnly,
+      preferredHours,
+    };
+    const schedule = generateSchedule(input);
+
+    const rows = schedule.timestamps.map((ts, index) =>
+      this.queue.create({
+        project,
+        scheduledAt: new Date(ts),
+        status: CommitStatus.PENDING,
+        queueIndex: indexOffset + index,
+      }),
+    );
+    await this.queue.save(rows);
+
+    await this.projects.save(project);
+
+    return this.detail(userId, projectId);
+  }
+
+  private toDateString(value: Date | string): string {
+    if (typeof value === 'string') return value;
+    return value.toISOString().slice(0, 10);
   }
 
   async list(userId: string): Promise<ProjectDetail[]> {

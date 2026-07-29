@@ -5,11 +5,13 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dtos/create-project.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
 import { CurrentUserId } from '../common/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { CliOrJwtAuthGuard } from '../auth/guards/cli-auth.guard';
@@ -35,6 +37,15 @@ export class ProjectsController {
   @Get(':id')
   detail(@CurrentUserId() userId: string, @Param('id') id: string) {
     return this.projectsService.detail(userId, id);
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUserId() userId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    return this.projectsService.update(userId, id, dto);
   }
 
   @Delete(':id')

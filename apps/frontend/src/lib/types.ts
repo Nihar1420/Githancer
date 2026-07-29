@@ -69,6 +69,16 @@ export interface CreateProjectDto {
   preferredHours?: number[];
 }
 
+export interface UpdateProjectDto {
+  startDate?: string;
+  endDate?: string;
+  totalCommits?: number;
+  schedulingMode?: SchedulingMode;
+  branch?: string;
+  workingDaysOnly?: boolean;
+  preferredHours?: number[];
+}
+
 export interface DailyCommit {
   date: string;
   count: number;

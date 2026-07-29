@@ -6,6 +6,9 @@ import { CommitQueue, CommitStatus } from '../commit-queue/commit-queue.entity';
 import { GithubService } from '../github/github.service';
 import { UsersService } from '../users/users.service';
 import { CreateProjectDto } from './dtos/create-project.dto';
+import { UpdateProjectDto } from './dtos/update-project.dto';
+import { ProjectStatus } from './project.entity';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -90,5 +93,72 @@ describe('ProjectsService', () => {
     github.validateBranch.mockRejectedValue(new Error('GitHub auth failed (403)'));
     await expect(service.create('user-1', dto)).resolves.toBeDefined();
     expect(savedQueueRows).toHaveLength(10);
+  });
+
+  describe('update', () => {
+    const activeProject = {
+      id: 'proj-1',
+      owner: { id: 'user-1' },
+      repoFullName: 'nihar/demo',
+      branch: 'main',
+      startDate: new Date('2026-01-01'),
+      endDate: new Date('2026-06-30'),
+      totalCommits: 10,
+      schedulingMode: SchedulingMode.LINEAR,
+      status: ProjectStatus.ACTIVE,
+      workingDaysOnly: false,
+      preferredHours: null,
+    };
+
+    const updateDto: UpdateProjectDto = { totalCommits: 3 };
+
+    it('regenerates the pending queue and keeps executed entries', async () => {
+      projectRepo.findOne.mockResolvedValue({ ...activeProject });
+      // Last kept (executed/skipped) row sits at queueIndex 4 -> 5 executed rows.
+      queueRepo.findOne.mockImplementation(async (opts: any) => {
+        if (opts?.order?.queueIndex === 'DESC') return { queueIndex: 4 };
+        return null;
+      });
+
+      await service.update('user-1', 'proj-1', updateDto);
+
+      // Only pending/in-flight rows are deleted — executed history survives.
+      expect(queueRepo.delete).toHaveBeenCalledTimes(1);
+      const deleteArg = queueRepo.delete.mock.calls[0][0];
+      expect(deleteArg.project).toEqual({ id: 'proj-1' });
+      expect(deleteArg.status.value).toEqual([
+        CommitStatus.PENDING,
+        CommitStatus.IN_FLIGHT,
+      ]);
+
+      // New rows continue after the last executed index (4) -> start at 5.
+      expect(savedQueueRows).toHaveLength(3);
+      expect(savedQueueRows.every((r) => r.status === CommitStatus.PENDING)).toBe(true);
+      expect(savedQueueRows.map((r) => r.queueIndex)).toEqual([5, 6, 7]);
+    });
+
+    it('throws 400 when the project is completed', async () => {
+      projectRepo.findOne.mockResolvedValue({
+        ...activeProject,
+        status: ProjectStatus.COMPLETED,
+      });
+
+      await expect(service.update('user-1', 'proj-1', updateDto)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(queueRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it('throws 404 when the caller is not the owner', async () => {
+      projectRepo.findOne.mockResolvedValue({
+        ...activeProject,
+        owner: { id: 'someone-else' },
+      });
+
+      await expect(service.update('user-1', 'proj-1', updateDto)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(queueRepo.delete).not.toHaveBeenCalled();
+    });
   });
 });

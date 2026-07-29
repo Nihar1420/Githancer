@@ -7,6 +7,7 @@ import type {
   PaginatedQueue,
   ProjectWithStats,
   RepoSummary,
+  UpdateProjectDto,
   User,
 } from './types';
 import * as mock from './mock-data';
@@ -112,6 +113,10 @@ export const api = {
     async create(dto: CreateProjectDto): Promise<ProjectWithStats> {
       if (USE_MOCK) return mocked(mock.createMockProject(dto));
       return (await http.post<ProjectWithStats>('/api/v1/projects', dto)).data;
+    },
+    async update(id: string, dto: UpdateProjectDto): Promise<ProjectWithStats> {
+      if (USE_MOCK) return mocked(mock.updateMockProject(id, dto));
+      return (await http.patch<ProjectWithStats>(`/api/v1/projects/${id}`, dto)).data;
     },
     async delete(id: string): Promise<void> {
       if (USE_MOCK) return mocked(undefined);

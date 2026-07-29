@@ -13,6 +13,7 @@ import { CommitQueueTable } from '@/components/timeline/CommitQueueTable';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { EditProjectModal } from '@/components/dashboard/EditProjectModal';
 import { LoadingState, ErrorState } from '@/components/ui/States';
 import type { ProjectStatus } from '@/lib/types';
 
@@ -30,6 +31,8 @@ export default function ProjectDetailPage() {
   const queueQuery = useFullQueue(id);
   const del = useDeleteProject();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [toast, setToast] = useState('');
 
   if (isLoading) {
     return (
@@ -90,9 +93,28 @@ export default function ProjectDetailPage() {
               </Link>
             </div>
           </div>
-          <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
-            Delete project
-          </Button>
+          <div className="flex items-center gap-2">
+            {project.status !== 'completed' && (
+              <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+                Edit
+              </Button>
+            )}
+            <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
+              Delete project
+            </Button>
+          </div>
         </div>
 
         <div className="mb-6 rounded-xl border border-gtm-border bg-gtm-surface p-5">
@@ -139,6 +161,26 @@ export default function ProjectDetailPage() {
           </Button>
         </div>
       </Modal>
+
+      {editOpen && (
+        <EditProjectModal
+          project={project}
+          onClose={() => setEditOpen(false)}
+          onSuccess={() => {
+            setToast('✓ Project updated');
+            window.setTimeout(() => setToast(''), 3000);
+          }}
+        />
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-6 right-6 z-50 rounded-lg border border-gtm-border bg-gtm-surface px-4 py-3 text-sm text-slate-100 shadow-xl"
+        >
+          {toast}
+        </div>
+      )}
     </>
   );
 }
