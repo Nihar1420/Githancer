@@ -1,105 +1,68 @@
 # Githancer
 
-> Git timeline management for developers.
+[![npm](https://img.shields.io/npm/v/githancer-cli?color=CB3837&logo=npm&style=flat-square)](https://www.npmjs.com/package/githancer-cli)
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white&style=flat-square)
+![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white&style=flat-square)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=flat-square)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white&style=flat-square)
 
-Githancer lets you plan a project's commit history across a date range and then
-lay commits down on that timeline. You define a repository, a window, a commit
-count, and a scheduling strategy; the backend generates a deterministic queue of
-timestamps; and the CLI creates backdated commits from that queue — online or
-offline. A dashboard visualises progress, and optional AI suggests commit
-messages.
+> Plan a repository's commit history across a date range, then lay commits down on that timeline — from your terminal.
 
-## Stack
+Githancer is a **Git timeline manager**. You define a repository, a date window, a commit count, and a scheduling strategy; the backend generates a deterministic queue of timestamps; and the CLI writes commits from that queue. A dashboard visualises the plan and progress, and optional AI drafts commit messages.
+
+> ⚠️ Githancer creates **backdated commits**. Use it on your own repositories and be aware of your platform's and employer's policies around commit history.
+
+## Install
+
+```bash
+npx githancer-cli --help      # zero-install
+# or
+npm i -g githancer-cli
+```
+
+## Architecture
+
+Turborepo-style **pnpm monorepo**:
+
+```
+apps/
+  backend/    NestJS 10 API (timeline generation, auth)      :3001
+  frontend/   Next.js 14 (App Router) + Tailwind dashboard
+  cli/        Node + Commander — the published githancer-cli
+packages/
+  scheduler/  deterministic timestamp-queue engine (shared)
+  common/     shared types & utilities
+infra/        Docker Compose (Postgres + services)
+```
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | NestJS 10, TypeScript, port 3001 |
+| Backend | NestJS 10, TypeScript |
 | Frontend | Next.js 14 (App Router), Tailwind CSS |
-| CLI | Node.js + Commander (`timeline`) |
-| Database | PostgreSQL 16 via TypeORM (migrations) |
+| CLI | Node.js + Commander, published to npm |
+| Database | PostgreSQL 16 · TypeORM (migrations) |
 | Auth | GitHub OAuth 2.0 + JWT (httpOnly cookie) |
-| AI | Anthropic API (optional) |
-| Deploy | Docker · Railway (backend + DB) · Vercel (frontend) |
+| AI | Anthropic Claude API (optional commit messages) |
+| Deploy | Docker · Railway (API + DB) · Vercel (dashboard) · CI/CD |
 
-## Quick Start (Local)
+## Quick start (local)
 
-**Prerequisites:** Node 20+, pnpm 9 (`corepack enable`), Docker + Docker Compose, Git.
+**Prereqs:** Node 20+, pnpm 9 (`corepack enable`), Docker, Git.
 
 ```bash
-# 1. Install
 pnpm install
-
-# 2. Configure env
-cp apps/backend/.env.example apps/backend/.env
+cp apps/backend/.env.example apps/backend/.env        # set JWT_SECRET, ENCRYPTION_KEY
 cp apps/frontend/.env.local.example apps/frontend/.env.local
-# Fill in JWT_SECRET (openssl rand -base64 48) and
-# ENCRYPTION_KEY (openssl rand -hex 32) in apps/backend/.env
-
-# 3. Bring up Postgres + backend + frontend
-cd infra/docker && docker compose up -d
-
-# 4. Run migrations (first time)
-sh infra/scripts/migrate.sh
+cd infra/docker && docker compose up -d               # Postgres + backend + frontend
 ```
 
-Backend: http://localhost:3001/api/v1/health · Frontend: http://localhost:3000
+## How it works
 
-To develop the frontend against fixtures (no backend needed), set
-`NEXT_PUBLIC_USE_MOCK=true` in `apps/frontend/.env.local`.
+1. **Define** — repo, date range, commit count, strategy (uniform, weighted, business-hours…).
+2. **Generate** — the scheduler produces a reproducible queue of timestamps.
+3. **Apply** — the CLI creates commits at those timestamps, online or offline.
+4. **Track** — the dashboard shows the planned vs. realised timeline.
 
-## CLI Usage
+## License
 
-```bash
-timeline init      # create .timeline.json (project id, branch, API url)
-timeline login     # authenticate and store the CLI API key
-timeline sync      # fetch + cache upcoming commit timestamps
-timeline commit    # backdated commit from the next timestamp (-m or AI suggestion)
-timeline push      # push the configured branch to origin
-timeline status    # show queue progress (completed / remaining / next)
-```
-
-## Project Structure
-
-```
-githancer/
-├── apps/
-│   ├── backend/     NestJS API + auth + analytics + AI
-│   ├── frontend/    Next.js dashboard
-│   └── cli/         timeline CLI
-├── packages/
-│   ├── common/      shared types (scheduler, analytics, DTOs)
-│   └── scheduler/   deterministic scheduling strategies
-├── infra/
-│   ├── docker/      Dockerfiles + docker-compose
-│   ├── railway/     Railway deploy config
-│   ├── scripts/     migrate.sh, seed-check.sh
-│   └── docs/        CI/CD secrets reference
-└── .github/workflows/  CI + deploy pipelines
-```
-
-## Development
-
-```bash
-pnpm --filter backend dev            # NestJS watch (:3001)
-pnpm --filter frontend dev           # Next.js dev (:3000)
-pnpm --filter git-timeline-manager-cli dev
-
-pnpm --filter @gtm/scheduler test    # scheduler unit tests (100% branch)
-pnpm --filter backend test           # backend unit tests
-pnpm --filter frontend test          # frontend (Vitest)
-
-pnpm --filter backend migration:generate   # after entity changes
-pnpm --filter backend migration:run
-```
-
-## Deployment
-
-- **Backend → Railway** (Dockerfile-based, `infra/railway/railway.json`) with a
-  PostgreSQL add-on. Pushes to `main` touching `apps/backend/**` or `packages/**`
-  trigger `deploy-backend.yml`.
-- **Frontend → Vercel** — pushes touching `apps/frontend/**` trigger
-  `deploy-frontend.yml`.
-- Required env vars and CI/CD secrets: see
-  `.claude/documentation/git-timeline-manager/03_ENV_AND_KEYS.md` and
-  `infra/docs/github-secrets.md`.
-
+MIT
