@@ -66,3 +66,9 @@ cd infra/docker && docker compose up -d               # Postgres + backend + fro
 ## License
 
 MIT
+
+## Quick install
+
+```bash
+npx githancer-cli --help
+```
