@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white&style=flat-square)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white&style=flat-square)
 
-> Plan a repository's commit history across a date range, then lay commits down on that timeline — from your terminal.
+> Plan a repository's commit history across a date range, then lay commits down on that timeline - from your terminal.
 
 Githancer is a **Git timeline manager**. You define a repository, a date window, a commit count, and a scheduling strategy; the backend generates a deterministic queue of timestamps; and the CLI writes commits from that queue. A dashboard visualises the plan and progress, and optional AI drafts commit messages.
 
@@ -28,7 +28,7 @@ Turborepo-style **pnpm monorepo**:
 apps/
   backend/    NestJS 10 API (timeline generation, auth)      :3001
   frontend/   Next.js 14 (App Router) + Tailwind dashboard
-  cli/        Node + Commander — the published githancer-cli
+  cli/        Node + Commander - the published githancer-cli
 packages/
   scheduler/  deterministic timestamp-queue engine (shared)
   common/     shared types & utilities
@@ -58,17 +58,11 @@ cd infra/docker && docker compose up -d               # Postgres + backend + fro
 
 ## How it works
 
-1. **Define** — repo, date range, commit count, strategy (uniform, weighted, business-hours…).
-2. **Generate** — the scheduler produces a reproducible queue of timestamps.
-3. **Apply** — the CLI creates commits at those timestamps, online or offline.
-4. **Track** — the dashboard shows the planned vs. realised timeline.
+1. **Define** - repo, date range, commit count, strategy (uniform, weighted, business-hours…).
+2. **Generate** - the scheduler produces a reproducible queue of timestamps.
+3. **Apply** - the CLI creates commits at those timestamps, online or offline.
+4. **Track** - the dashboard shows the planned vs. realised timeline.
 
 ## License
 
 MIT
-
-## Quick install
-
-```bash
-npx githancer-cli --help
-```
