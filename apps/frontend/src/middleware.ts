@@ -29,7 +29,7 @@ export async function middleware(req: NextRequest) {
     });
     if (!res.ok) {
       const url = req.nextUrl.clone();
-      url.pathname = '/';
+      url.pathname = '/login';
       return NextResponse.redirect(url);
     }
   } catch {

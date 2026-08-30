@@ -20,7 +20,7 @@ export default function AuthCallbackPage() {
         router.replace('/dashboard');
       })
       .catch(() => {
-        if (active) router.replace('/');
+        if (active) router.replace('/login');
       });
     return () => {
       active = false;

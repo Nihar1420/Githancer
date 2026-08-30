@@ -15,7 +15,7 @@ export function Navbar() {
   async function signOut() {
     await api.auth.logout();
     clearUser();
-    router.push('/');
+    router.push('/login');
   }
 
   return (

@@ -40,7 +40,7 @@ http.interceptors.response.use(
       error.response?.status === 401 &&
       typeof window !== 'undefined'
     ) {
-      window.location.href = '/';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   },
